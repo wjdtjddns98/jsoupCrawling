@@ -1,17 +1,18 @@
 package org.example;
 
-
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.ss.usermodel.CellType;
 import org.example.model.ExelVO;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -19,6 +20,8 @@ import java.util.Scanner;
 public class Project4 {
     static Scanner sc = new Scanner(System.in);
     static List<ExelVO> booklist = new ArrayList<>();
+    static HSSFWorkbook workBook = new HSSFWorkbook();
+
     public static void main(String[] args) {
         boolean running = true;
         do{
@@ -58,14 +61,19 @@ public class Project4 {
         ExelVO vo = getNaverApi(query);
         if(vo == null) return;
 
-        System.out.print("검색된 책을 저장 하시겠습니까? (y/n) 선택 : ");
-        if(sc.nextLine().toLowerCase().charAt(0) == 'y'){
-            booklist.add(vo);
-            System.out.println("저장 되었습니다.");
-        } else if (sc.nextLine().toLowerCase().charAt(0) == 'n') {
-            System.out.println("저장 되지 않습니다");
+        while (true) {
+            System.out.print("검색된 책을 저장 하시겠습니까? (y/n) 선택 : ");
+            char a = sc.nextLine().toLowerCase().charAt(0);
+            if (a == 'y') {
+                booklist.add(vo);
+                System.out.println("저장 되었습니다.");
+                break;
+            } else if (a == 'n') {
+                System.out.println("저장 되지 않습니다.");
+                break;
+            } else {
+                System.out.println("잘못 입력하셨습니다.");}
         }
-
     }
 
     /**
@@ -118,7 +126,6 @@ public class Project4 {
             System.out.println("isbn : " + book.get("isbn") + "\t");
             System.out.println("출간일 : " + book.get("pubdate") + "\t");
 
-
             vo.setTitle(book.get("title").toString());
             vo.setAuthor(book.get("author").toString());
             vo.setCompany(book.get("publisher").toString());
@@ -139,7 +146,7 @@ public class Project4 {
             System.out.println("리스트에 저장된 책이 없습니다");
         }else {
             for (int i = 0; i < booklist.size(); i++) {
-                ExelVO vo = booklist.get(i);
+                    ExelVO vo = booklist.get(i);
                 System.out.println((i+1)+ ". " + vo.getTitle());
             }
 
@@ -147,7 +154,52 @@ public class Project4 {
     }
 
     private static void exelInput() {
-        System.out.println("3");
+        try {
+            HSSFSheet sheet = null;
+            //가상의 엑셀 시트를 생성
+            if(workBook.getSheet("Book SHEET") != null ) {
+                sheet = workBook.getSheet("Book SHEET");
+            } else {
+                sheet = workBook.createSheet("BooK SHEET");
+            }
+
+            //엑셀 시트에 첫줄 만들기
+            HSSFRow rowA = sheet.createRow(0);
+            HSSFCell cellA = rowA.createCell(0);
+            cellA.setCellValue(new HSSFRichTextString("책제목"));
+            HSSFCell cellB = rowA.createCell(1);
+            cellB.setCellValue(new HSSFRichTextString("저자"));
+            HSSFCell cellC = rowA.createCell(2);
+            cellC.setCellValue(new HSSFRichTextString("출판사"));
+            HSSFCell cellD = rowA.createCell(3);
+            cellD.setCellValue(new HSSFRichTextString("isbn"));
+            HSSFCell cellE = rowA.createCell(4);
+            cellE.setCellValue(new HSSFRichTextString("이미지주소"));
+
+
+            //북리스트의 데이터를 엑셀 시트에 넣기
+            int i=1; // 첫줄은 스킵, 1부터 시작
+            for(ExelVO book : booklist) {
+                HSSFRow row = sheet.createRow(i++);
+                row.createCell(0).setCellType(CellType.STRING);
+                row.createCell(0).setCellValue(book.getTitle());
+                row.createCell(1).setCellType(CellType.STRING);
+                row.createCell(1).setCellValue(book.getAuthor());
+                row.createCell(2).setCellType(CellType.STRING);
+                row.createCell(2).setCellValue(book.getCompany());
+                row.createCell(3).setCellType(CellType.STRING);
+                row.createCell(3).setCellValue(book.getIsbn());
+                row.createCell(4).setCellType(CellType.STRING);
+                row.createCell(4).setCellValue(book.getImgurl());
+            }
+
+            FileOutputStream fos = new FileOutputStream("BookList.xls");
+            workBook.write(fos);
+            fos.close();
+            System.out.println("엑셀로 저장 성공!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private static void exit() {
